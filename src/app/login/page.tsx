@@ -6,32 +6,35 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { mockUsers } from '@/lib/mock-data';
 import { CheckSquare } from 'lucide-react';
+import { api, setToken } from '@/lib/api';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = () => {
-    // Mock authentication
-    const user = mockUsers.find(u => u.email.split('@')[0] === username.toLowerCase());
+  const handleLogin = async () => {
+    setIsLoading(true);
+    setError('');
+    try {
+      const response = await api.post<{ access_token: string }>('/auth/token', {
+        username: email,
+        password: password,
+      });
 
-    if (user) {
-      localStorage.setItem('taskzen-user', JSON.stringify(user));
-      router.push('/dashboard');
-    } else if (username.toLowerCase() === 'admin' && mockUsers.find(u => u.role === 'admin')) {
-        const adminUser = mockUsers.find(u => u.role === 'admin');
-        localStorage.setItem('taskzen-user', JSON.stringify(adminUser));
+      if (response && response.access_token) {
+        setToken(response.access_token);
         router.push('/dashboard');
-    } else if (username.toLowerCase() === 'user' && mockUsers.find(u => u.role === 'user')) {
-        const basicUser = mockUsers.find(u => u.role === 'user');
-        localStorage.setItem('taskzen-user', JSON.stringify(basicUser));
-        router.push('/dashboard');
-    } else {
-      setError('Invalid username or password. Try "admin" or "user".');
+      } else {
+        setError('Login failed. Please check your credentials.');
+      }
+    } catch (err) {
+      setError('Invalid email or password.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -47,12 +50,13 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="username">Username</Label>
+            <Label htmlFor="email">Email</Label>
             <Input
-              id="username"
-              placeholder="admin or user"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              id="email"
+              type="email"
+              placeholder="user@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
             />
           </div>
@@ -61,7 +65,7 @@ export default function LoginPage() {
             <Input
               id="password"
               type="password"
-              placeholder="any password"
+              placeholder="Enter your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -70,8 +74,8 @@ export default function LoginPage() {
           {error && <p className="text-sm text-destructive">{error}</p>}
         </CardContent>
         <CardFooter className="flex flex-col gap-4">
-          <Button onClick={handleLogin} className="w-full">
-            Login
+          <Button onClick={handleLogin} className="w-full" disabled={isLoading}>
+            {isLoading ? 'Logging in...' : 'Login'}
           </Button>
           <p className="text-xs text-center text-muted-foreground">
             Don't have an account?{' '}

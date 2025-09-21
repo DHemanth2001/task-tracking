@@ -1,11 +1,36 @@
-import { mockUsers } from '@/lib/mock-data';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+'use client';
+
+import { useEffect, useState } from 'react';
+import type { User } from '@/lib/types';
+import { Card, CardHeader } from '@/components/ui/card';
 import { UserAvatar } from '@/components/user-avatar';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
+import { api } from '@/lib/api';
 
 export default function TeamPage() {
-  const users = mockUsers;
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const fetchedUsers = await api.get<User[]>('/users');
+        if (fetchedUsers) {
+          setUsers(fetchedUsers);
+        }
+      } catch (error) {
+        console.error("Failed to fetch users:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUsers();
+  }, []);
+
+  if (loading) {
+    return <div>Loading team members...</div>
+  }
 
   return (
     <div>
@@ -21,7 +46,7 @@ export default function TeamPage() {
                   <div className="flex items-center gap-4">
                     <UserAvatar name={user.name} />
                     <div>
-                      <CardTitle className="text-lg">{user.name}</CardTitle>
+                      <h3 className="text-lg font-semibold">{user.name}</h3>
                       <p className="text-sm text-muted-foreground">{user.email}</p>
                     </div>
                   </div>

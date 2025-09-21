@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { mockTasks, mockUsers } from '@/lib/mock-data';
 import type { Task, User } from '@/lib/types';
 import { UserAvatar } from '@/components/user-avatar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -10,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { getTaskStatus } from '@/lib/utils';
+import { api } from '@/lib/api';
 
 export default function TeamMemberPage() {
   const params = useParams();
@@ -17,15 +17,32 @@ export default function TeamMemberPage() {
 
   const [user, setUser] = useState<User | null>(null);
   const [assignedTasks, setAssignedTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (userId) {
-      const foundUser = mockUsers.find(u => u.id === userId);
-      setUser(foundUser || null);
+      const fetchData = async () => {
+        try {
+          const [userData, allTasks] = await Promise.all([
+            api.get<User>(`/users/${userId}`),
+            api.get<Task[]>('/tasks')
+          ]);
+          
+          if (userData) {
+            setUser(userData);
+          }
 
-      const allTasks = JSON.parse(localStorage.getItem('taskzen-tasks') || JSON.stringify(mockTasks));
-      const userTasks = allTasks.filter((task: Task) => task.responsible === userId);
-      setAssignedTasks(userTasks);
+          if (allTasks) {
+            const userTasks = allTasks.filter((task: Task) => task.responsible === userId);
+            setAssignedTasks(userTasks);
+          }
+        } catch (error) {
+          console.error("Failed to fetch team member data:", error);
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchData();
     }
   }, [userId]);
   
@@ -42,8 +59,7 @@ export default function TeamMemberPage() {
     backlog: 'bg-gray-500',
   };
 
-
-  if (!user) {
+  if (loading || !user) {
     return <div>Loading or user not found...</div>;
   }
 

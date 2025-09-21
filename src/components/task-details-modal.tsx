@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
+import { api } from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
 
 interface TaskDetailsModalProps {
   isOpen: boolean;
@@ -28,20 +30,32 @@ export function TaskDetailsModal({
 }: TaskDetailsModalProps) {
   const [priority, setPriority] = useState<TaskPriority>(task.priority);
   const [isCompleted, setIsCompleted] = useState(task.status === 'completed');
+  const { toast } = useToast();
 
   const responsibleUser = users.find(u => u.id === task.responsible)?.name || 'Unknown';
   const tagUser = users.find(u => u.id === task.tag)?.name || 'Unknown';
 
-  const handleSave = () => {
-    const updatedTask: Task = {
-      ...task,
+  const handleSave = async () => {
+    const newStatus = isCompleted ? 'completed' : task.status === 'completed' ? 'in_progress' : task.status;
+    const updatePayload = {
       priority,
-      status: isCompleted ? 'completed' : task.status === 'completed' ? 'in_progress' : task.status,
+      status: newStatus,
     };
-    onTaskUpdate(updatedTask);
+
+    try {
+      const updatedTask = await api.put<Task>(`/tasks/${task.id}`, updatePayload);
+      if (updatedTask) {
+        onTaskUpdate(updatedTask);
+        toast({ title: 'Task Updated', description: 'Your changes have been saved.' });
+      }
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not save changes.' });
+    }
   };
 
   if (!currentUser) return null;
+
+  const canEdit = currentUser.role === 'admin' || currentUser.id === task.responsible;
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -67,7 +81,11 @@ export function TaskDetailsModal({
           </div>
           <div>
             <Label>Priority</Label>
-            <Select value={priority} onValueChange={(value: TaskPriority) => setPriority(value)}>
+            <Select 
+              value={priority} 
+              onValueChange={(value: TaskPriority) => setPriority(value)}
+              disabled={!canEdit}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -84,14 +102,17 @@ export function TaskDetailsModal({
                 id="completed"
                 checked={isCompleted}
                 onChange={(e) => setIsCompleted(e.target.checked)}
-                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                disabled={!canEdit}
+                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
               />
-              <Label htmlFor="completed">Mark as Completed</Label>
+              <Label htmlFor="completed" className={!canEdit ? 'text-muted-foreground' : ''}>
+                Mark as Completed
+              </Label>
            </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave}>Save Changes</Button>
+          <Button onClick={handleSave} disabled={!canEdit}>Save Changes</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

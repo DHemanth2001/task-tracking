@@ -19,5 +19,5 @@ export type Task = {
   tag: string; // user id
   startDate: string; // ISO string
   endDate: string; // ISO string
-  status: 'assigned' | 'in_progress' | 'completed'; // backlog is a derived status
+  status: 'assigned' | 'in_progress' | 'completed';
 };

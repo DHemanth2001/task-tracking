@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { SidebarProvider, Sidebar, SidebarInset } from '@/components/ui/sidebar';
 import { SidebarNav } from '@/components/sidebar-nav';
 import type { User } from '@/lib/types';
+import { api, clearToken } from '@/lib/api';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -12,13 +13,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const userStr = localStorage.getItem('taskzen-user');
-    if (userStr) {
-      setUser(JSON.parse(userStr));
-    } else {
-      router.replace('/login');
-    }
-    setIsLoading(false);
+    const fetchUser = async () => {
+      try {
+        const currentUser = await api.get<User>('/auth/me');
+        if (currentUser) {
+          setUser(currentUser);
+        } else {
+          clearToken();
+          router.replace('/login');
+        }
+      } catch (error) {
+        console.error('Authentication failed:', error);
+        clearToken();
+        router.replace('/login');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchUser();
   }, [router]);
 
   if (isLoading || !user) {

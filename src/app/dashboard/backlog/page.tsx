@@ -1,23 +1,39 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { mockTasks, mockUsers } from '@/lib/mock-data';
 import type { Task, User } from '@/lib/types';
 import { getTaskStatus } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
+import { api } from '@/lib/api';
 
 export default function BacklogPage() {
   const [backlogTasks, setBacklogTasks] = useState<Task[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const allTasks = JSON.parse(localStorage.getItem('taskzen-tasks') || JSON.stringify(mockTasks));
-    const filteredTasks = allTasks.filter((task: Task) => getTaskStatus(task) === 'backlog');
-    setBacklogTasks(filteredTasks);
-    setUsers(mockUsers);
+    async function fetchData() {
+      try {
+        const [allTasks, allUsers] = await Promise.all([
+          api.get<Task[]>('/tasks'),
+          api.get<User[]>('/users'),
+        ]);
+
+        if (allTasks && allUsers) {
+          const filteredTasks = allTasks.filter((task: Task) => getTaskStatus(task) === 'backlog');
+          setBacklogTasks(filteredTasks);
+          setUsers(allUsers);
+        }
+      } catch (error) {
+        console.error("Failed to fetch data:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
   }, []);
 
   const getUserName = (userId: string) => {
@@ -29,6 +45,10 @@ export default function BacklogPage() {
     medium: 'bg-orange-500 hover:bg-orange-500',
     low: 'bg-yellow-500 hover:bg-yellow-500',
   };
+  
+  if (loading) {
+    return <div>Loading backlog...</div>
+  }
 
   return (
     <div>

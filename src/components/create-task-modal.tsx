@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -13,11 +13,12 @@ import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
 import { PlusCircle, CalendarIcon, Sparkles } from 'lucide-react';
 import { format, addDays } from 'date-fns';
-import { mockUsers, mockTasks } from '@/lib/mock-data';
 import { useToast } from '@/hooks/use-toast';
 import { getTaskAssignmentSuggestion } from '@/app/actions';
 import type { SuggestTaskAssignmentInput } from '@/ai/flows/suggest-task-assignment';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import type { User } from '@/lib/types';
+import { api } from '@/lib/api';
 
 const taskSchema = z.object({
   outcome: z.string().min(1, 'Outcome is required'),
@@ -37,7 +38,25 @@ export function CreateTaskModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [isAISuggesting, setIsAISuggesting] = useState(false);
   const [aiSuggestion, setAISuggestion] = useState<{ userId: string; reason: string } | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (isOpen) {
+      const fetchUsers = async () => {
+        try {
+          const fetchedUsers = await api.get<User[]>('/users');
+          if (fetchedUsers) {
+            setUsers(fetchedUsers);
+          }
+        } catch (error) {
+          console.error("Failed to fetch users for modal:", error);
+          toast({ variant: 'destructive', title: 'Error', description: 'Could not load users.' });
+        }
+      };
+      fetchUsers();
+    }
+  }, [isOpen, toast]);
 
   const form = useForm<TaskFormData>({
     resolver: zodResolver(taskSchema),
@@ -48,29 +67,33 @@ export function CreateTaskModal() {
     },
   });
 
-  const onSubmit = (data: TaskFormData) => {
-    const newTask = {
-      id: `task-${Date.now()}`,
+  const onSubmit = async (data: TaskFormData) => {
+    const newTaskPayload = {
       ...data,
       startDate: data.startDate.toISOString(),
       endDate: data.endDate.toISOString(),
-      status: 'assigned' as const,
+      status: 'assigned',
     };
 
-    const currentTasks = JSON.parse(localStorage.getItem('taskzen-tasks') || JSON.stringify(mockTasks));
-    const newTasks = [...currentTasks, newTask];
-    localStorage.setItem('taskzen-tasks', JSON.stringify(newTasks));
-    
-    toast({
-      title: 'Task Created!',
-      description: `Task "${newTask.outcome}" has been assigned.`,
-    });
-    
-    setIsOpen(false);
-    form.reset();
-    setAISuggestion(null);
-    // This is a mock refresh. In a real app, you'd use state management or refetch.
-    window.location.reload(); 
+    try {
+      const createdTask = await api.post('/tasks', newTaskPayload);
+      if (createdTask) {
+        toast({
+          title: 'Task Created!',
+          description: `Task "${data.outcome}" has been assigned.`,
+        });
+        setIsOpen(false);
+        form.reset();
+        setAISuggestion(null);
+        window.location.reload(); // Refresh to show the new task
+      }
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Creation Failed',
+        description: 'Could not create the task. Please try again.',
+      });
+    }
   };
   
   const handleAISuggestion = async () => {
@@ -85,7 +108,7 @@ export function CreateTaskModal() {
 
     const input: SuggestTaskAssignmentInput = {
       taskDescription: outcome,
-      userRoles: mockUsers.map(u => ({ userId: u.id, role: u.role, availability: u.availability, skills: u.skills })),
+      userRoles: users.map(u => ({ userId: u.id, role: u.role, availability: u.availability, skills: u.skills })),
     };
 
     try {
@@ -150,7 +173,7 @@ export function CreateTaskModal() {
                     <Select onValueChange={field.onChange} value={field.value}>
                       <SelectTrigger><SelectValue placeholder="Select user..." /></SelectTrigger>
                       <SelectContent>
-                        {mockUsers.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
+                        {users.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   )}
@@ -177,10 +200,10 @@ export function CreateTaskModal() {
               name="tag"
               control={form.control}
               render={({ field }) => (
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <SelectTrigger><SelectValue placeholder="Select user..." /></SelectTrigger>
                   <SelectContent>
-                    {mockUsers.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
+                    {users.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               )}

@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { Task, User } from '@/lib/types';
-import { mockTasks, mockUsers } from '@/lib/mock-data';
 import { getTaskStatus } from '@/lib/utils';
 import { TaskColumn } from './task-column';
 import { TaskDetailsModal } from './task-details-modal';
 import { useToast } from '@/hooks/use-toast';
 import { isToday } from 'date-fns';
+import { api } from '@/lib/api';
 
 export function TaskBoard() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -15,37 +15,49 @@ export function TaskBoard() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  useEffect(() => {
-    const userStr = localStorage.getItem('taskzen-user');
-    const user = userStr ? JSON.parse(userStr) : null;
-    setCurrentUser(user);
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [user, fetchedTasks, fetchedUsers] = await Promise.all([
+        api.get<User>('/auth/me'),
+        api.get<Task[]>('/tasks'),
+        api.get<User[]>('/users'),
+      ]);
+      
+      setCurrentUser(user);
+      setTasks(fetchedTasks || []);
+      setUsers(fetchedUsers || []);
 
-    const storedTasks = localStorage.getItem('taskzen-tasks');
-    const initialTasks = storedTasks ? JSON.parse(storedTasks) : mockTasks;
-    setTasks(initialTasks);
-    
-    setUsers(mockUsers);
-
-    // Mock notifications
-    initialTasks.forEach((task: Task) => {
-      if (task.responsible === user?.id) {
-        if (isToday(new Date(task.startDate))) {
-            toast({ title: 'Task Starting Today', description: `Your task "${task.outcome}" is scheduled to start today.` });
-        }
-        if (isToday(new Date(task.endDate))) {
-            toast({ title: 'Task Due Today', description: `Your task "${task.outcome}" is due today.` });
-        }
+      // Mock notifications
+      if (user && fetchedTasks) {
+        fetchedTasks.forEach((task: Task) => {
+          if (task.responsible === user.id) {
+            if (isToday(new Date(task.startDate))) {
+                toast({ title: 'Task Starting Today', description: `Your task "${task.outcome}" is scheduled to start today.` });
+            }
+            if (isToday(new Date(task.endDate))) {
+                toast({ title: 'Task Due Today', description: `Your task "${task.outcome}" is due today.` });
+            }
+          }
+        });
       }
-    });
-
+    } catch (error) {
+      console.error("Failed to fetch board data:", error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not load board data.' });
+    } finally {
+      setLoading(false);
+    }
   }, [toast]);
 
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
   const handleTaskUpdate = (updatedTask: Task) => {
-    const newTasks = tasks.map(task => (task.id === updatedTask.id ? updatedTask : task));
-    setTasks(newTasks);
-    localStorage.setItem('taskzen-tasks', JSON.stringify(newTasks));
+    setTasks(prevTasks => prevTasks.map(task => (task.id === updatedTask.id ? updatedTask : task)));
     setIsModalOpen(false);
   };
   
@@ -80,6 +92,10 @@ export function TaskBoard() {
 
     return { assigned, inProgress, completed };
   }, [displayedTasks]);
+
+  if (loading) {
+    return <div>Loading tasks...</div>;
+  }
 
   return (
     <>

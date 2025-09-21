@@ -11,7 +11,6 @@ import {
 } from '@/components/ui/sidebar';
 import {
   CheckSquare,
-  PlusCircle,
   LayoutGrid,
   Archive,
   BookOpen,
@@ -24,17 +23,19 @@ import type { User } from '@/lib/types';
 import { CreateTaskModal } from './create-task-modal';
 import { UserAvatar } from './user-avatar';
 import { Button } from './ui/button';
+import { clearToken } from '@/lib/api';
 
 export function SidebarNav({ user }: { user: User }) {
   const pathname = usePathname();
   const router = useRouter();
 
   const handleLogout = () => {
-    localStorage.removeItem('taskzen-user');
+    clearToken();
     router.push('/login');
   };
 
   const menuItems = [
+    { href: '/dashboard', label: 'Dashboard', icon: CheckSquare },
     { href: '/dashboard/priority-matrix', label: 'Priority Matrix', icon: LayoutGrid },
     { href: '/dashboard/backlog', label: 'Backlog', icon: Archive },
     { href: '#', label: 'Trainings', icon: BookOpen, disabled: true },
@@ -61,7 +62,7 @@ export function SidebarNav({ user }: { user: User }) {
             <SidebarMenuItem key={item.label}>
               <Link href={item.href} passHref legacyBehavior>
                 <SidebarMenuButton
-                  isActive={!item.disabled && pathname.startsWith(item.href)}
+                  isActive={!item.disabled && pathname === item.href}
                   disabled={item.disabled}
                   aria-disabled={item.disabled}
                 >
