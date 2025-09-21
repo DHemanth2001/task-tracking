@@ -1,0 +1,120 @@
+import type { User, Task } from './types';
+import { addDays, subDays } from 'date-fns';
+
+export const mockUsers: User[] = [
+  {
+    id: '1',
+    name: 'Hemanth',
+    email: 'hemanth@example.com',
+    role: 'admin',
+    availability: 'Full-time',
+    skills: ['React', 'Node.js', 'System Design'],
+  },
+  {
+    id: '2',
+    name: 'Sarah',
+    email: 'sarah@example.com',
+    role: 'user',
+    availability: 'Part-time (Mon, Wed, Fri)',
+    skills: ['UI/UX Design', 'Figma', 'CSS'],
+  },
+  {
+    id: '3',
+    name: 'Mike',
+    email: 'mike@example.com',
+    role: 'user',
+    availability: 'Full-time, prefers backend tasks',
+    skills: ['Database Management', 'SQL', 'Go'],
+  },
+  {
+    id: '4',
+    name: 'Admin User',
+    email: 'admin@taskzen.com',
+    role: 'admin',
+    availability: 'Full-time',
+    skills: ['Project Management', 'System Architecture', 'DevOps'],
+  },
+  {
+    id: '5',
+    name: 'Basic User',
+    email: 'user@taskzen.com',
+    role: 'user',
+    availability: 'Full-time, available for frontend',
+    skills: ['React', 'TypeScript', 'Storybook'],
+  },
+];
+
+const today = new Date();
+
+export const mockTasks: Task[] = [
+  {
+    id: 'task-1',
+    outcome: 'Develop user authentication flow',
+    priority: 'high',
+    responsible: '1',
+    tag: '3',
+    startDate: subDays(today, 2).toISOString(),
+    endDate: addDays(today, 5).toISOString(),
+    status: 'in_progress',
+  },
+  {
+    id: 'task-2',
+    outcome: 'Design the main dashboard UI',
+    priority: 'high',
+    responsible: '2',
+    tag: '2',
+    startDate: subDays(today, 5).toISOString(),
+    endDate: subDays(today, 1).toISOString(), // Should be backlog
+    status: 'assigned',
+  },
+  {
+    id: 'task-3',
+    outcome: 'Set up the database schema',
+    priority: 'medium',
+    responsible: '3',
+    tag: '3',
+    startDate: addDays(today, 2).toISOString(),
+    endDate: addDays(today, 9).toISOString(),
+    status: 'assigned',
+  },
+  {
+    id: 'task-4',
+    outcome: 'Create API endpoints for tasks',
+    priority: 'high',
+    responsible: '1',
+    tag: '3',
+    startDate: subDays(today, 1).toISOString(),
+    endDate: addDays(today, 3).toISOString(),
+    status: 'in_progress',
+  },
+  {
+    id: 'task-5',
+    outcome: 'Review and approve UI mockups',
+    priority: 'low',
+    responsible: '4',
+    tag: '2',
+    startDate: subDays(today, 10).toISOString(),
+    endDate: subDays(today, 5).toISOString(),
+    status: 'completed',
+  },
+  {
+    id: 'task-6',
+    outcome: 'Write documentation for the auth API',
+    priority: 'medium',
+    responsible: '5',
+    tag: '1',
+    startDate: today.toISOString(),
+    endDate: addDays(today, 6).toISOString(),
+    status: 'in_progress',
+  },
+  {
+    id: 'task-7',
+    outcome: 'Deploy staging environment',
+    priority: 'high',
+    responsible: '4',
+    tag: '4',
+    startDate: addDays(today, 7).toISOString(),
+    endDate: addDays(today, 14).toISOString(),
+    status: 'assigned',
+  },
+];

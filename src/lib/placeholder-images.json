@@ -1,3 +1,10 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "priority-matrix",
+      "description": "A 4-quadrant priority matrix showing urgent/important tasks.",
+      "imageUrl": "https://picsum.photos/seed/matrix/800/600",
+      "imageHint": "priority matrix"
+    }
+  ]
 }
