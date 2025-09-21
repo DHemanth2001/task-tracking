@@ -32,7 +32,11 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     ...options.headers,
   };
 
-  if (token) {
+  // Only add the Authorization header if the token exists and it's not a public route
+  const publicRoutes = ['/auth/token', '/users/'];
+  const isPublicPost = options.method === 'POST' && publicRoutes.includes(endpoint);
+
+  if (token && !isPublicPost) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
@@ -41,7 +45,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 
     if (!response.ok) {
       // If the error is 401 Unauthorized, clear the token and redirect
-      if (response.status === 401) {
+      if (response.status === 401 && !isPublicPost) {
         clearToken();
         // Check for window to ensure this code runs only on the client
         if (typeof window !== 'undefined') {
